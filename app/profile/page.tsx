@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { MainNav } from "@/components/main-nav";
 import { UserNav } from "@/components/user-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -14,107 +14,100 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
+import { User, Mail, Calendar, Upload } from "lucide-react";
 
 export default function ProfilePage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("personal");
-
-  // Datos del perfil
-  const [profileData, setProfileData] = useState({
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
     name: "",
     email: "",
-    currentAge: 30,
-    targetAge: 45,
-    currentIncome: 50000,
-    targetNetWorth: 1000000,
-    selectedStrategy: "leanfire",
   });
 
+  // Redirigir si no está autenticado
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/auth/login");
     }
+  }, [status, router]);
 
+  // Cargar datos del usuario cuando la sesión esté disponible
+  useEffect(() => {
     if (session?.user) {
-      // En un caso real, aquí cargaríamos los datos del perfil desde la API
-      setProfileData({
-        ...profileData,
+      setFormData({
         name: session.user.name || "",
         email: session.user.email || "",
       });
     }
-  }, [session, status, router]);
+  }, [session]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setProfileData({
-      ...profileData,
-      [name]:
-        name === "currentAge" ||
-        name === "targetAge" ||
-        name === "currentIncome" ||
-        name === "targetNetWorth"
-          ? parseInt(value)
-          : value,
-    });
+  // Obtener las iniciales del nombre del usuario para el avatar fallback
+  const getInitials = (name: string) => {
+    if (!name) return "FI";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .substring(0, 2);
   };
 
-  const handleStrategyChange = (value: string) => {
-    setProfileData({
-      ...profileData,
-      selectedStrategy: value,
-    });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setIsLoading(true);
 
     try {
-      // Aquí iría la llamada a la API para actualizar el perfil
-      // await fetch('/api/profile', { method: 'PUT', body: JSON.stringify(profileData) });
-
-      // Simulamos una espera
+      // Aquí iría la lógica para actualizar el perfil del usuario
+      // Por ahora, solo simulamos una actualización exitosa
       await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Actualizar la sesión con los nuevos datos
+      await update({
+        ...session,
+        user: {
+          ...session?.user,
+          name: formData.name,
+        },
+      });
 
       toast.success("Perfil actualizado correctamente");
     } catch (error) {
+      console.error("Error al actualizar el perfil:", error);
       toast.error("Error al actualizar el perfil");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
+  // Mostrar pantalla de carga mientras se verifica la sesión
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        Cargando...
+        <p>Cargando...</p>
       </div>
     );
   }
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-10 border-b bg-background">
         <div className="container flex h-16 items-center justify-between py-4">
-          <div className="flex items-center gap-6 md:gap-10">
-            <h1 className="text-xl font-bold tracking-tight">FIRE Path</h1>
-            <MainNav />
-          </div>
+          <MainNav />
           <div className="flex items-center gap-4">
             <ThemeToggle />
             <UserNav />
@@ -122,177 +115,150 @@ export default function ProfilePage() {
         </div>
       </header>
       <main className="flex-1 container py-6">
-        <div className="space-y-6">
-          <h2 className="text-3xl font-bold tracking-tight">Mi Perfil</h2>
-          <p className="text-muted-foreground">
-            Gestiona tu información personal y configura tus objetivos
-            financieros.
-          </p>
+        <div className="flex flex-col gap-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Perfil</h1>
+            <p className="text-muted-foreground">
+              Gestiona tu información personal y preferencias
+            </p>
+          </div>
 
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="space-y-6"
-          >
+          <Tabs defaultValue="personal" className="space-y-4">
             <TabsList>
               <TabsTrigger value="personal">Información Personal</TabsTrigger>
-              <TabsTrigger value="financial">Objetivos Financieros</TabsTrigger>
-              <TabsTrigger value="strategy">Estrategia FIRE</TabsTrigger>
+              <TabsTrigger value="security">Seguridad</TabsTrigger>
+              <TabsTrigger value="preferences">Preferencias</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="personal" className="space-y-6">
+            <TabsContent value="personal" className="space-y-4">
               <Card>
                 <CardHeader>
                   <CardTitle>Información Personal</CardTitle>
                   <CardDescription>
-                    Actualiza tu información personal básica.
+                    Actualiza tu información personal y foto de perfil
                   </CardDescription>
                 </CardHeader>
-                <form onSubmit={handleSubmit}>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Nombre</Label>
-                      <Input
-                        id="name"
-                        name="name"
-                        value={profileData.name}
-                        onChange={handleInputChange}
-                      />
+                <CardContent className="space-y-6">
+                  <div className="flex flex-col items-center sm:flex-row sm:items-start gap-6">
+                    <div className="flex flex-col items-center gap-2">
+                      <Avatar className="h-24 w-24">
+                        <AvatarImage
+                          src={session?.user?.image || ""}
+                          alt={session?.user?.name || "Usuario"}
+                        />
+                        <AvatarFallback className="text-2xl">
+                          {getInitials(session?.user?.name || "FI")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <Button variant="outline" size="sm" className="mt-2">
+                        <Upload className="mr-2 h-4 w-4" />
+                        Cambiar foto
+                      </Button>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        value={profileData.email}
-                        onChange={handleInputChange}
-                        disabled
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        El email no se puede cambiar.
-                      </p>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button type="submit" disabled={loading}>
-                      {loading ? "Guardando..." : "Guardar Cambios"}
-                    </Button>
-                  </CardFooter>
-                </form>
+
+                    <form onSubmit={handleSubmit} className="flex-1 space-y-4">
+                      <div className="grid gap-2">
+                        <Label
+                          htmlFor="name"
+                          className="flex items-center gap-2"
+                        >
+                          <User className="h-4 w-4" />
+                          Nombre
+                        </Label>
+                        <Input
+                          id="name"
+                          name="name"
+                          value={formData.name}
+                          onChange={handleChange}
+                          placeholder="Tu nombre completo"
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label
+                          htmlFor="email"
+                          className="flex items-center gap-2"
+                        >
+                          <Mail className="h-4 w-4" />
+                          Email
+                        </Label>
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={handleChange}
+                          placeholder="tu@ejemplo.com"
+                          disabled
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          El email no se puede cambiar
+                        </p>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label
+                          htmlFor="joined"
+                          className="flex items-center gap-2"
+                        >
+                          <Calendar className="h-4 w-4" />
+                          Fecha de registro
+                        </Label>
+                        <Input id="joined" value="01/01/2023" disabled />
+                      </div>
+
+                      <Button type="submit" disabled={isLoading}>
+                        {isLoading ? "Guardando..." : "Guardar cambios"}
+                      </Button>
+                    </form>
+                  </div>
+                </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="financial" className="space-y-6">
+            <TabsContent value="security" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Objetivos Financieros</CardTitle>
+                  <CardTitle>Seguridad</CardTitle>
                   <CardDescription>
-                    Configura tus objetivos financieros para tu plan FIRE.
+                    Gestiona tu contraseña y la seguridad de tu cuenta
                   </CardDescription>
                 </CardHeader>
-                <form onSubmit={handleSubmit}>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="currentAge">Edad Actual</Label>
-                        <Input
-                          id="currentAge"
-                          name="currentAge"
-                          type="number"
-                          value={profileData.currentAge}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="targetAge">Edad Objetivo FIRE</Label>
-                        <Input
-                          id="targetAge"
-                          name="targetAge"
-                          type="number"
-                          value={profileData.targetAge}
-                          onChange={handleInputChange}
-                        />
-                      </div>
+                <CardContent className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="current-password">
+                        Contraseña actual
+                      </Label>
+                      <Input id="current-password" type="password" />
                     </div>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="currentIncome">
-                          Ingreso Anual Actual (€)
-                        </Label>
-                        <Input
-                          id="currentIncome"
-                          name="currentIncome"
-                          type="number"
-                          value={profileData.currentIncome}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="targetNetWorth">
-                          Patrimonio Neto Objetivo (€)
-                        </Label>
-                        <Input
-                          id="targetNetWorth"
-                          name="targetNetWorth"
-                          type="number"
-                          value={profileData.targetNetWorth}
-                          onChange={handleInputChange}
-                        />
-                      </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="new-password">Nueva contraseña</Label>
+                      <Input id="new-password" type="password" />
                     </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button type="submit" disabled={loading}>
-                      {loading ? "Guardando..." : "Guardar Cambios"}
-                    </Button>
-                  </CardFooter>
-                </form>
+                    <div className="grid gap-2">
+                      <Label htmlFor="confirm-password">
+                        Confirmar contraseña
+                      </Label>
+                      <Input id="confirm-password" type="password" />
+                    </div>
+                    <Button>Cambiar contraseña</Button>
+                  </div>
+                </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="strategy" className="space-y-6">
+            <TabsContent value="preferences" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Estrategia FIRE</CardTitle>
+                  <CardTitle>Preferencias</CardTitle>
                   <CardDescription>
-                    Selecciona la estrategia FIRE que mejor se adapte a tus
-                    objetivos.
+                    Personaliza tu experiencia en la plataforma
                   </CardDescription>
                 </CardHeader>
-                <form onSubmit={handleSubmit}>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="selectedStrategy">Estrategia FIRE</Label>
-                      <Select
-                        value={profileData.selectedStrategy}
-                        onValueChange={handleStrategyChange}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona una estrategia" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="leanfire">Lean FIRE</SelectItem>
-                          <SelectItem value="fatfire">Fat FIRE</SelectItem>
-                          <SelectItem value="coastfire">Coast FIRE</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {profileData.selectedStrategy === "leanfire" &&
-                          "Lean FIRE: Enfocado en minimizar gastos y alcanzar la independencia financiera con un patrimonio más modesto."}
-                        {profileData.selectedStrategy === "fatfire" &&
-                          "Fat FIRE: Busca alcanzar la independencia financiera con un patrimonio más elevado para mantener un estilo de vida más cómodo."}
-                        {profileData.selectedStrategy === "coastfire" &&
-                          "Coast FIRE: Consiste en ahorrar lo suficiente en los primeros años para luego reducir o eliminar las contribuciones a la jubilación."}
-                      </p>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button type="submit" disabled={loading}>
-                      {loading ? "Guardando..." : "Guardar Cambios"}
-                    </Button>
-                  </CardFooter>
-                </form>
+                <CardContent>
+                  <p>Contenido de preferencias (próximamente)</p>
+                </CardContent>
               </Card>
             </TabsContent>
           </Tabs>

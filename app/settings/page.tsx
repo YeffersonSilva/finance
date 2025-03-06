@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { MainNav } from "@/components/main-nav";
 import { UserNav } from "@/components/user-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -14,161 +14,97 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
 import {
-  AlertCircle,
-  Bell,
-  Lock,
-  Mail,
-  Shield,
-  Smartphone,
-} from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import { Bell, Globe, Lock, Eye, Moon, Sun, Languages } from "lucide-react";
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("account");
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Estados para los diferentes ajustes
-  const [accountSettings, setAccountSettings] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
-
-  const [notificationSettings, setNotificationSettings] = useState({
+  // Estados para las configuraciones
+  const [settings, setSettings] = useState({
+    // Notificaciones
     emailNotifications: true,
     pushNotifications: false,
-    monthlyReports: true,
-    goalAlerts: true,
-    marketUpdates: false,
+    weeklyReports: true,
+
+    // Apariencia
+    theme: "system",
+    fontSize: "medium",
+
+    // Privacidad
+    profileVisibility: "public",
+    shareData: true,
+
+    // Preferencias
+    language: "es",
+    currency: "EUR",
   });
 
-  const [privacySettings, setPrivacySettings] = useState({
-    dataSharing: false,
-    analyticsConsent: true,
-  });
+  // Redirigir si no está autenticado
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/auth/login");
+    }
+  }, [status, router]);
 
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setAccountSettings({
-      ...accountSettings,
-      [name]: value,
+  // Manejar cambios en los switches
+  const handleSwitchChange = (setting: string) => {
+    setSettings({
+      ...settings,
+      [setting]: !settings[setting as keyof typeof settings],
     });
   };
 
-  const handleNotificationToggle = (setting: string) => {
-    setNotificationSettings({
-      ...notificationSettings,
-      [setting]:
-        !notificationSettings[setting as keyof typeof notificationSettings],
+  // Manejar cambios en los selects
+  const handleSelectChange = (setting: string, value: string) => {
+    setSettings({
+      ...settings,
+      [setting]: value,
     });
   };
 
-  const handlePrivacyToggle = (setting: string) => {
-    setPrivacySettings({
-      ...privacySettings,
-      [setting]: !privacySettings[setting as keyof typeof privacySettings],
-    });
-  };
-
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (accountSettings.newPassword !== accountSettings.confirmPassword) {
-      toast.error("Las contraseñas no coinciden");
-      return;
-    }
-
-    setLoading(true);
+  // Guardar configuraciones
+  const handleSaveSettings = async () => {
+    setIsLoading(true);
 
     try {
-      // Aquí iría la llamada a la API para cambiar la contraseña
-      // await fetch('/api/user/password', { method: 'PUT', body: JSON.stringify(accountSettings) });
-
-      // Simulamos una espera
+      // Aquí iría la lógica para guardar las configuraciones
       await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      setAccountSettings({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
-
-      toast.success("Contraseña actualizada correctamente");
+      toast.success("Configuración guardada correctamente");
     } catch (error) {
-      toast.error("Error al actualizar la contraseña");
+      toast.error("Error al guardar la configuración");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleNotificationsSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      // Aquí iría la llamada a la API para actualizar las notificaciones
-      // await fetch('/api/user/notifications', { method: 'PUT', body: JSON.stringify(notificationSettings) });
-
-      // Simulamos una espera
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      toast.success("Preferencias de notificaciones actualizadas");
-    } catch (error) {
-      toast.error("Error al actualizar las preferencias");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePrivacySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      // Aquí iría la llamada a la API para actualizar la privacidad
-      // await fetch('/api/user/privacy', { method: 'PUT', body: JSON.stringify(privacySettings) });
-
-      // Simulamos una espera
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      toast.success("Configuración de privacidad actualizada");
-    } catch (error) {
-      toast.error("Error al actualizar la configuración");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Mostrar pantalla de carga mientras se verifica la sesión
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        Cargando...
+        <p>Cargando...</p>
       </div>
     );
   }
 
-  if (status === "unauthenticated") {
-    router.push("/auth/login");
-    return null;
-  }
-
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-10 border-b bg-background">
         <div className="container flex h-16 items-center justify-between py-4">
-          <div className="flex items-center gap-6 md:gap-10">
-            <h1 className="text-xl font-bold tracking-tight">FIRE Path</h1>
-            <MainNav />
-          </div>
+          <MainNav />
           <div className="flex items-center gap-4">
             <ThemeToggle />
             <UserNav />
@@ -176,235 +112,286 @@ export default function SettingsPage() {
         </div>
       </header>
       <main className="flex-1 container py-6">
-        <div className="space-y-6">
-          <h2 className="text-3xl font-bold tracking-tight">Configuración</h2>
-          <p className="text-muted-foreground">
-            Gestiona tu cuenta, preferencias de notificaciones y privacidad.
-          </p>
+        <div className="flex flex-col gap-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Configuración</h1>
+            <p className="text-muted-foreground">
+              Personaliza tu experiencia en FIRE Path
+            </p>
+          </div>
 
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="space-y-6"
-          >
+          <Tabs defaultValue="notifications" className="space-y-4">
             <TabsList>
-              <TabsTrigger value="account">Cuenta</TabsTrigger>
               <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
+              <TabsTrigger value="appearance">Apariencia</TabsTrigger>
               <TabsTrigger value="privacy">Privacidad</TabsTrigger>
+              <TabsTrigger value="preferences">Preferencias</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="account" className="space-y-6">
+            <TabsContent value="notifications" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Seguridad de la Cuenta</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bell className="h-5 w-5" />
+                    Notificaciones
+                  </CardTitle>
                   <CardDescription>
-                    Actualiza tu contraseña y configura la seguridad de tu
-                    cuenta.
+                    Configura cómo y cuándo quieres recibir notificaciones
                   </CardDescription>
                 </CardHeader>
-                <form onSubmit={handlePasswordSubmit}>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="currentPassword">Contraseña Actual</Label>
-                      <Input
-                        id="currentPassword"
-                        name="currentPassword"
-                        type="password"
-                        value={accountSettings.currentPassword}
-                        onChange={handlePasswordChange}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="newPassword">Nueva Contraseña</Label>
-                      <Input
-                        id="newPassword"
-                        name="newPassword"
-                        type="password"
-                        value={accountSettings.newPassword}
-                        onChange={handlePasswordChange}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">
-                        Confirmar Contraseña
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="email-notifications">
+                        Notificaciones por email
                       </Label>
-                      <Input
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        type="password"
-                        value={accountSettings.confirmPassword}
-                        onChange={handlePasswordChange}
-                        required
-                      />
+                      <p className="text-sm text-muted-foreground">
+                        Recibe actualizaciones importantes por email
+                      </p>
                     </div>
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Seguridad</AlertTitle>
-                      <AlertDescription>
-                        Usa una contraseña segura que no utilices en otros
-                        sitios.
-                      </AlertDescription>
-                    </Alert>
-                  </CardContent>
-                  <CardFooter>
-                    <Button type="submit" disabled={loading}>
-                      {loading ? "Actualizando..." : "Actualizar Contraseña"}
-                    </Button>
-                  </CardFooter>
-                </form>
+                    <Switch
+                      id="email-notifications"
+                      checked={settings.emailNotifications}
+                      onCheckedChange={() =>
+                        handleSwitchChange("emailNotifications")
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="push-notifications">
+                        Notificaciones push
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Recibe notificaciones en tiempo real en tu navegador
+                      </p>
+                    </div>
+                    <Switch
+                      id="push-notifications"
+                      checked={settings.pushNotifications}
+                      onCheckedChange={() =>
+                        handleSwitchChange("pushNotifications")
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="weekly-reports">Informes semanales</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Recibe un resumen semanal de tu progreso FIRE
+                      </p>
+                    </div>
+                    <Switch
+                      id="weekly-reports"
+                      checked={settings.weeklyReports}
+                      onCheckedChange={() =>
+                        handleSwitchChange("weeklyReports")
+                      }
+                    />
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button onClick={handleSaveSettings} disabled={isLoading}>
+                    {isLoading ? "Guardando..." : "Guardar cambios"}
+                  </Button>
+                </CardFooter>
               </Card>
             </TabsContent>
 
-            <TabsContent value="notifications" className="space-y-6">
+            <TabsContent value="appearance" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Preferencias de Notificaciones</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Eye className="h-5 w-5" />
+                    Apariencia
+                  </CardTitle>
                   <CardDescription>
-                    Configura cómo y cuándo quieres recibir notificaciones.
+                    Personaliza la apariencia de la aplicación
                   </CardDescription>
                 </CardHeader>
-                <form onSubmit={handleNotificationsSubmit}>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between space-x-2">
-                      <div className="flex items-center space-x-2">
-                        <Mail className="h-4 w-4" />
-                        <Label htmlFor="emailNotifications">
-                          Notificaciones por Email
-                        </Label>
-                      </div>
-                      <Switch
-                        id="emailNotifications"
-                        checked={notificationSettings.emailNotifications}
-                        onCheckedChange={() =>
-                          handleNotificationToggle("emailNotifications")
+                <CardContent className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="theme">Tema</Label>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={settings.theme}
+                        onValueChange={(value) =>
+                          handleSelectChange("theme", value)
                         }
-                      />
+                      >
+                        <SelectTrigger id="theme" className="w-full">
+                          <SelectValue placeholder="Selecciona un tema" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="light">
+                            <div className="flex items-center gap-2">
+                              <Sun className="h-4 w-4" />
+                              <span>Claro</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="dark">
+                            <div className="flex items-center gap-2">
+                              <Moon className="h-4 w-4" />
+                              <span>Oscuro</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="system">Sistema</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="flex items-center justify-between space-x-2">
-                      <div className="flex items-center space-x-2">
-                        <Smartphone className="h-4 w-4" />
-                        <Label htmlFor="pushNotifications">
-                          Notificaciones Push
-                        </Label>
-                      </div>
-                      <Switch
-                        id="pushNotifications"
-                        checked={notificationSettings.pushNotifications}
-                        onCheckedChange={() =>
-                          handleNotificationToggle("pushNotifications")
-                        }
-                      />
-                    </div>
-                    <div className="flex items-center justify-between space-x-2">
-                      <div className="flex items-center space-x-2">
-                        <Bell className="h-4 w-4" />
-                        <Label htmlFor="monthlyReports">
-                          Informes Mensuales
-                        </Label>
-                      </div>
-                      <Switch
-                        id="monthlyReports"
-                        checked={notificationSettings.monthlyReports}
-                        onCheckedChange={() =>
-                          handleNotificationToggle("monthlyReports")
-                        }
-                      />
-                    </div>
-                    <div className="flex items-center justify-between space-x-2">
-                      <div className="flex items-center space-x-2">
-                        <Bell className="h-4 w-4" />
-                        <Label htmlFor="goalAlerts">Alertas de Objetivos</Label>
-                      </div>
-                      <Switch
-                        id="goalAlerts"
-                        checked={notificationSettings.goalAlerts}
-                        onCheckedChange={() =>
-                          handleNotificationToggle("goalAlerts")
-                        }
-                      />
-                    </div>
-                    <div className="flex items-center justify-between space-x-2">
-                      <div className="flex items-center space-x-2">
-                        <Bell className="h-4 w-4" />
-                        <Label htmlFor="marketUpdates">
-                          Actualizaciones del Mercado
-                        </Label>
-                      </div>
-                      <Switch
-                        id="marketUpdates"
-                        checked={notificationSettings.marketUpdates}
-                        onCheckedChange={() =>
-                          handleNotificationToggle("marketUpdates")
-                        }
-                      />
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button type="submit" disabled={loading}>
-                      {loading ? "Guardando..." : "Guardar Preferencias"}
-                    </Button>
-                  </CardFooter>
-                </form>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="font-size">Tamaño de fuente</Label>
+                    <Select
+                      value={settings.fontSize}
+                      onValueChange={(value) =>
+                        handleSelectChange("fontSize", value)
+                      }
+                    >
+                      <SelectTrigger id="font-size" className="w-full">
+                        <SelectValue placeholder="Selecciona un tamaño de fuente" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="small">Pequeño</SelectItem>
+                        <SelectItem value="medium">Mediano</SelectItem>
+                        <SelectItem value="large">Grande</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button onClick={handleSaveSettings} disabled={isLoading}>
+                    {isLoading ? "Guardando..." : "Guardar cambios"}
+                  </Button>
+                </CardFooter>
               </Card>
             </TabsContent>
 
-            <TabsContent value="privacy" className="space-y-6">
+            <TabsContent value="privacy" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Configuración de Privacidad</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Lock className="h-5 w-5" />
+                    Privacidad
+                  </CardTitle>
                   <CardDescription>
-                    Gestiona cómo se utiliza tu información.
+                    Gestiona la privacidad y seguridad de tu cuenta
                   </CardDescription>
                 </CardHeader>
-                <form onSubmit={handlePrivacySubmit}>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between space-x-2">
-                      <div className="flex items-center space-x-2">
-                        <Shield className="h-4 w-4" />
-                        <Label htmlFor="dataSharing">
-                          Compartir Datos Anónimos
-                        </Label>
-                      </div>
-                      <Switch
-                        id="dataSharing"
-                        checked={privacySettings.dataSharing}
-                        onCheckedChange={() =>
-                          handlePrivacyToggle("dataSharing")
-                        }
-                      />
+                <CardContent className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="profile-visibility">
+                      Visibilidad del perfil
+                    </Label>
+                    <Select
+                      value={settings.profileVisibility}
+                      onValueChange={(value) =>
+                        handleSelectChange("profileVisibility", value)
+                      }
+                    >
+                      <SelectTrigger id="profile-visibility" className="w-full">
+                        <SelectValue placeholder="Selecciona la visibilidad" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="public">Público</SelectItem>
+                        <SelectItem value="private">Privado</SelectItem>
+                        <SelectItem value="friends">Solo amigos</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="share-data">
+                        Compartir datos anónimos
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Ayúdanos a mejorar compartiendo datos anónimos de uso
+                      </p>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Permite compartir datos anónimos para mejorar nuestros
-                      servicios.
-                    </p>
-                    <div className="flex items-center justify-between space-x-2">
-                      <div className="flex items-center space-x-2">
-                        <Lock className="h-4 w-4" />
-                        <Label htmlFor="analyticsConsent">
-                          Consentimiento de Análisis
-                        </Label>
-                      </div>
-                      <Switch
-                        id="analyticsConsent"
-                        checked={privacySettings.analyticsConsent}
-                        onCheckedChange={() =>
-                          handlePrivacyToggle("analyticsConsent")
-                        }
-                      />
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Permite el uso de cookies y análisis para mejorar tu
-                      experiencia.
-                    </p>
-                  </CardContent>
-                  <CardFooter>
-                    <Button type="submit" disabled={loading}>
-                      {loading ? "Guardando..." : "Guardar Configuración"}
-                    </Button>
-                  </CardFooter>
-                </form>
+                    <Switch
+                      id="share-data"
+                      checked={settings.shareData}
+                      onCheckedChange={() => handleSwitchChange("shareData")}
+                    />
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button onClick={handleSaveSettings} disabled={isLoading}>
+                    {isLoading ? "Guardando..." : "Guardar cambios"}
+                  </Button>
+                </CardFooter>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="preferences" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Globe className="h-5 w-5" />
+                    Preferencias
+                  </CardTitle>
+                  <CardDescription>
+                    Configura tus preferencias regionales y de idioma
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="language"
+                      className="flex items-center gap-2"
+                    >
+                      <Languages className="h-4 w-4" />
+                      Idioma
+                    </Label>
+                    <Select
+                      value={settings.language}
+                      onValueChange={(value) =>
+                        handleSelectChange("language", value)
+                      }
+                    >
+                      <SelectTrigger id="language" className="w-full">
+                        <SelectValue placeholder="Selecciona un idioma" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="es">Español</SelectItem>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="fr">Français</SelectItem>
+                        <SelectItem value="de">Deutsch</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="currency">Moneda</Label>
+                    <Select
+                      value={settings.currency}
+                      onValueChange={(value) =>
+                        handleSelectChange("currency", value)
+                      }
+                    >
+                      <SelectTrigger id="currency" className="w-full">
+                        <SelectValue placeholder="Selecciona una moneda" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="EUR">Euro (€)</SelectItem>
+                        <SelectItem value="USD">
+                          Dólar estadounidense ($)
+                        </SelectItem>
+                        <SelectItem value="GBP">Libra esterlina (£)</SelectItem>
+                        <SelectItem value="JPY">Yen japonés (¥)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button onClick={handleSaveSettings} disabled={isLoading}>
+                    {isLoading ? "Guardando..." : "Guardar cambios"}
+                  </Button>
+                </CardFooter>
               </Card>
             </TabsContent>
           </Tabs>
